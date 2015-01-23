@@ -1,0 +1,6 @@
+---
+solaris_enabled: yes                       # Enable module
+
+ansible_ssh_user: vagrant
+ansible_ssh_pass: 
+

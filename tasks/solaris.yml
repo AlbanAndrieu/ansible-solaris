@@ -1,0 +1,38 @@
+---
+# This playbook contains common plays that will be run on all nodes.
+
+#pkgadd -d http://get.opencsw.org/now
+#/opt/csw/bin/pkgutil -U
+#/opt/csw/bin/pkgutil -a vim
+#/opt/csw/bin/pkgutil -y -i vim
+#/opt/csw/bin/vim
+
+#- name: Enable some required package
+#  action: command /usr/sbin/pkgadd -d http://get.opencsw.org/now
+#  sudo: yes
+#
+#- name: Install other tools
+#  action: command /opt/csw/bin/pkgutil -U
+#  sudo: yes
+
+# Install a package 
+- name: Install CSWcommon
+  pkgutil: name=CSWcommon state=present
+#  svr4pkg: name=CSWcommon src=http://get.opencsw.org/now state=present
+
+# Install a package from an already copied file
+#- svr4pkg: name=CSWcommon src=/tmp/cswpkgs.pkg state=present
+
+# Install a package directly from an http site
+#- svr4pkg: name=CSWpkgutil src=http://get.opencsw.org/now state=present zone=current
+
+#- svr4pkg: name=CSWansible src=http://www.opencsw.org/packages/CSWansible/ state=present zone=current
+
+# Install a package with a response file
+#- svr4pkg: name=CSWggrep src=/tmp/third-party.pkg response_file=/tmp/ggrep.response state=present
+
+# Ensure that a package is not installed.
+#- svr4pkg: name=SUNWgnome-sound-recorder state=absent
+
+# Ensure that a category is not installed.
+#- svr4pkg: name=FIREFOX state=absent category=true

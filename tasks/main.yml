@@ -1,0 +1,7 @@
+---
+# This playbook contains common plays that will be run on all nodes.
+
+- include: solaris.yml
+  when: solaris_enabled 
+  tags: [solaris]
+  
