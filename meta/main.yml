@@ -1,16 +1,34 @@
 ---
+dependencies: []
 
 galaxy_info:
   author: Alban Andrieu
-  description: A role for installing windows
+  description: A role for installing solaris
   company: Nabla
-  license: MIT
-  min_ansible_version: 1.6.3
+  license: GPLv3
+  min_ansible_version: '1.7.0'
   platforms:
-  - name: Windows
+  - name: solaris
     versions:
-    - Windows Server 2012
+    - Solaris 11
   categories:
   - system
-dependencies: []
+
+ansigenome_info:
+  galaxy_id: ''
+  galaxy_user: 'alban.andrieu'
+  galaxy_name: 'solaris'
+  
+  travis: False
+
+  synopsis: |
+    Describe your role in a few paragraphs....
+
+  usage: |
+    Run the following command :
+
+    `ansible-playbook -i hosts -c local -v solaris.yml -vvvv --ask-sudo-pass | tee setup.log`
+
+  #custom: |
+  #  Any custom output you want after the usage section..
 
