@@ -1,23 +1,23 @@
-ansible-windows
+ansible-solaris
 ====================
 
-A role for installing windows.
+A role for installing solaris.
 
-[![Build Status](https://api.travis-ci.org/AlbanAndrieu/ansible-windows.png?branch=master)](https://travis-ci.org/AlbanAndrieu/ansible-windows)
+[![Build Status](https://api.travis-ci.org/AlbanAndrieu/ansible-solaris.png?branch=master)](https://travis-ci.org/AlbanAndrieu/ansible-solaris)
 
 ## Actions
 
-- Ensures that windows is installed
+- Ensures that solaris is installed
 
 Usage example
 ------------
 
-    - name: Install windows
+    - name: Install solaris
       connection: local  
-      hosts: windows
+      hosts: solaris
       remote_user: albandri
       roles:
-        - role: windows           
+        - role: solaris           
         
 Requirements
 ------------
@@ -36,5 +36,5 @@ MIT
 
 #### Feedback, bug-reports, requests, ...
 
-Are [welcome](https://github.com/AlbanAndrieu/ansible-windows/issues)!
+Are [welcome](https://github.com/AlbanAndrieu/ansible-solaris/issues)!
 
