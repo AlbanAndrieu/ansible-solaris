@@ -1,6 +1,18 @@
 ---
 # This playbook contains common plays that will be run on all nodes.
 
+#WORKAROUND, please use dns role instead
+- name: network | Configure .bash_dns
+  command: mv /etc/resolv.conf-template /etc/resolv.conf
+  ignore_errors: true
+  tags: dns
+
+#WORKAROUND, please use dns role instead
+- name: network | Configure .bash_dns
+  command: mv /etc/nsswitch.dns /etc/nsswitch.conf
+  ignore_errors: true
+  tags: dns
+
 #pkgadd -d http://get.opencsw.org/now
 #/opt/csw/bin/pkgutil -U
 #/opt/csw/bin/pkgutil -a vim
