@@ -1,6 +1,8 @@
 ---
 # This playbook contains common plays that will be run on all nodes.
 
+- debug: msg=" Version : {{ ansible_distribution }} {{ ansible_distribution_version }} "
+
 #WORKAROUND, please use dns role instead
 - name: network | Configure .bash_dns
   command: mv /etc/resolv.conf-template /etc/resolv.conf
@@ -30,6 +32,7 @@
 # Install a package 
 - name: Install CSWcommon
   pkgutil: name=CSWcommon state=present
+  when: (ansible_distribution == 'Solaris')    
 #  svr4pkg: name=CSWcommon src=http://get.opencsw.org/now state=present
 
 # Install a package from an already copied file

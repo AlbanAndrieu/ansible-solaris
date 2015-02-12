@@ -9,45 +9,60 @@
 current_version = Gem::Version.new(Vagrant::VERSION)
 windows_version = Gem::Version.new("1.6.0")
 
+hosts_solaris = {
+  "vagrant-solaris-11" => "73",
+#  "host1" => "11",
+#  "host2" => "12"
+}
+
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-  #solaris 11
-  #
-  config.vm.define "vagrant-solaris-11"
-  config.vm.box = "vagrant-solaris-11"
-  #config.vm.box_url = "solaris-11.1.box"
-  config.vm.box_url = "http://www.benden.us/vagrant/solaris-11.1.box"
-  config.vm.hostname = "vagrant-solaris-11"
-  config.vm.boot_timeout = 600
-  
-  # Port forward RDP
-  config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true
-  config.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true
-  
-  config.vm.provider :virtualbox do |v, override|
-      v.gui = true
-      v.name = "vagrant-solaris-11"
-      v.customize ["modifyvm", :id, "--memory", 2048]
-      v.customize ["modifyvm", :id, "--cpus", 2]
-      v.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
-  end
-  
-  config.vm.provision "ansible" do |ansible|
-   #see https://docs.vagrantup.com/v2/provisioning/ansible.html
-   ansible.playbook = "solaris.yml"
-   ansible.inventory_path = "hosts"
-   ansible.verbose = "vvvv"
-   ansible.sudo = true
-   ansible.host_key_checking = false
-   ansible.extra_vars = { ansible_ssh_user: 'vagrant',
-                          ansible_ssh_pass: '' }
-   # Disable default limit (required with Vagrant 1.5+)
-   ansible.limit = 'all'
-  end
+  hosts_solaris.each do |name, port|
+    
+    VAGRANT_BASE_PORT = port
+    VAGRANT_SSH_PORT = "22" + VAGRANT_BASE_PORT
+    VAGRANT_NETWORK_IP = "192.168.11." + VAGRANT_BASE_PORT
+	
+    #solaris 11
+    #
+    config.vm.define "vagrant-solaris-11"
+    config.vm.box = "vagrant-solaris-11"
+    #config.vm.box_url = "solaris-11.1.box"
+    config.vm.box_url = "http://www.benden.us/vagrant/solaris-11.1.box"
+    config.vm.hostname = "%s.example.org" % name
+    #config.vm.network :private_network, ip: VAGRANT_NETWORK_IP    
+    config.vm.boot_timeout = 600
+    
+    # Port forward RDP
+    config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true
+    config.vm.network :forwarded_port, guest: 22, host: VAGRANT_SSH_PORT, id: "ssh", auto_correct: true
+    
+    config.vm.provider :virtualbox do |v, override|
+        #v.gui = true
+        v.name = name
+        v.customize ["modifyvm", :id, "--memory", 2048]
+        v.customize ["modifyvm", :id, "--cpus", 2]
+        v.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
+    end
+    
+    config.vm.provision "ansible" do |ansible|
+     #see https://docs.vagrantup.com/v2/provisioning/ansible.html
+     ansible.playbook = "solaris.yml"
+     ansible.inventory_path = "hosts"
+     ansible.verbose = "vvvv"
+     ansible.sudo = true
+     ansible.host_key_checking = false
+     ansible.extra_vars = { ansible_ssh_user: 'vagrant',
+                            ansible_ssh_pass: '' }
+     # Disable default limit (required with Vagrant 1.5+)
+     ansible.limit = 'all'
+    end
 
+  end
+  
   # All Vagrant configuration is done here. The most common configuration
   # options are documented and commented below. For a complete reference,
   # please see the online documentation at vagrantup.com.
