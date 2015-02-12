@@ -1,7 +1,7 @@
 ---
 # This playbook contains common plays that will be run on all nodes.
 
-- debug: msg=" Version : {{ ansible_distribution }} {{ ansible_distribution_version }} "
+- debug: msg="Version {{ ansible_distribution }} {{ ansible_distribution_version }}"
 
 #WORKAROUND, please use dns role instead
 - name: network | Configure .bash_dns
