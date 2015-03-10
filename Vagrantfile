@@ -33,7 +33,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     #config.vm.box_url = "solaris-11.1.box"
     config.vm.box_url = "http://www.benden.us/vagrant/solaris-11.1.box"
     config.vm.hostname = "%s.example.org" % name
-    #config.vm.network :private_network, ip: VAGRANT_NETWORK_IP    
+    config.vm.network :private_network, ip: VAGRANT_NETWORK_IP    
     config.vm.boot_timeout = 600
     
     # Port forward RDP
@@ -56,7 +56,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
      ansible.sudo = true
      ansible.host_key_checking = false
      ansible.extra_vars = { ansible_ssh_user: 'vagrant',
-                            ansible_ssh_pass: '' }
+                            ansible_ssh_pass: '',
+                            ansible_ssh_port: VAGRANT_SSH_PORT }
      # Disable default limit (required with Vagrant 1.5+)
      ansible.limit = 'all'
     end
