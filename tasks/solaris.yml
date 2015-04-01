@@ -29,10 +29,10 @@
 #  action: command /opt/csw/bin/pkgutil -U
 #  sudo: yes
 
-# Install a package 
+# Install a package
 - name: Install CSWcommon
   pkgutil: name=CSWcommon state=present
-  when: (ansible_distribution == 'Solaris')    
+  when: (ansible_distribution == 'Solaris') (and ansible_distribution_version not in ['11.1'])
 #  svr4pkg: name=CSWcommon src=http://get.opencsw.org/now state=present
 
 # Install a package from an already copied file
