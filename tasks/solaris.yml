@@ -21,19 +21,43 @@
 #/opt/csw/bin/pkgutil -y -i vim
 #/opt/csw/bin/vim
 
+
 #- name: Enable some required package
 #  action: command /usr/sbin/pkgadd -d http://get.opencsw.org/now
 #  sudo: yes
-#
+- name: Get pkgutil
+  shell: "echo y | pkgadd -d http://get.opencsw.org/now all"
+  sudo: yes
+
 #- name: Install other tools
 #  action: command /opt/csw/bin/pkgutil -U
 #  sudo: yes
+- name: Update CSW catalog
+  command: opt/csw/bin/pkgutil -U
+  when: ostype == "solaris"
+  sudo: yes
 
-# Install a package
-- name: Install CSWcommon
-  pkgutil: name=CSWcommon state=present
-  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+- name: Install basic CSW tools
+  command: opt/csw/bin/pkgutil -y -i vim diffutils less libreadline6 libreadline_dev libncurses_dev wget libssl_dev
+  when: ostype == "solaris"
+
+- name: Install CSW gm4 # Required for flex
+  command: opt/csw/bin/pkgutil -y -i gm4
+  when: ostype == "solaris"
+
+#- name: Install CSW additional packages
+#  command: opt/csw/bin/pkgutil -y -i CSWgpatch CSWtcl CSWbison CSWflex
+- name: Install CSW additional packages
+  pkgutil: name={{ item }} state=present
+#  when: (ansible_distribution == 'Solaris' and ansible_distribution_version not in ['11.1'])
+  when: ansible_distribution_release=='Oracle Solaris 10 1/13 s10x_u11wos_24a X86'
 #  svr4pkg: name=CSWcommon src=http://get.opencsw.org/now state=present
+  with_items:
+   - CSWcommon
+   - CSWgpatch
+   - CSWtcl
+   - CSWbison
+   - CSWflex
 
 # Install a package from an already copied file
 #- svr4pkg: name=CSWcommon src=/tmp/cswpkgs.pkg state=present
@@ -51,3 +75,84 @@
 
 # Ensure that a category is not installed.
 #- svr4pkg: name=FIREFOX state=absent category=true
+
+# expects param size in GB
+
+- set_fact:
+     size: 300
+
+- debug: msg="{{size}}"
+
+- name: Check current swap
+  shell: "swap -l | grep /dev/zvol/dsk/rpool/swap | awk '{print $4}'"  # prints the actual size of rpool/swap
+  register: currentswapsize
+
+- set_fact:
+     swapBadSize: false
+     swapMissing: false
+
+- set_fact:
+     swapBadSize: true
+  when: currentswapsize.stdout != "" and (currentswapsize.stdout|int - size|int *1024*1024*2)|abs > 20
+
+- set_fact:
+     swapMissing: true
+  when: currentswapsize.stdout == ""
+
+- name: Delete swap
+  command: swap -d /dev/zvol/dsk/rpool/swap
+  when:  swapBadSize and not swapMissing
+
+- name: Set rpool/swap
+  zfs: name=rpool/swap state=present volsize={{size}}G # volblocksize=4k not taken into account by ansible
+  when: swapMissing or swapBadSize
+
+- name: Create swap
+  command: swap -a /dev/zvol/dsk/rpool/swap
+  when: swapMissing or swapBadSize
+
+- name: Enable all CPUs
+  command: /usr/sbin/eeprom {{ item.key }}={{ item.value }}
+  with_items:
+    - { key: 'boot-ncpus' , value: '256'}
+    - { key: 'atapi-cd-dma-enabled' , value: '1' }
+
+- name: Kernel tuning
+  lineinfile:
+    dest=/etc/system
+    line="set {{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: 'cmi_no_init', value: '1' }
+    - { key: 'pcie:pcie_ecrc_value' , value: '0' }
+    - { key: 'maxusers' , value: '2048' }
+    - { key: 'reserved_procs', value: '40' }
+    - { key: 'pidmax' , value: '256000' }
+    - { key: 'max_nprocs' , value: '256000' }
+    - { key: 'rpcmod:clnt_max_conns' , value: '8' }
+
+- name: Set sticky bit on sudo
+  file: dest=/opt/sfw/bin/sudo mode=u+s
+
+- name: Change NFS client
+  lineinfile:
+    dest=/etc/default/nfs
+    line="NFS_CLIENT_VERSMAX=3"
+    regexp=^#NFS_CLIENT_VERSMAX=4.*
+
+- name: Disable unecessary services
+  command: "/usr/sbin/svcadm disable -s {{ item.value }}"
+  with_items:
+    - { value: 'svc:/application/management/dmi:default' }
+    - { value: 'svc:/application/graphical-login/cde-login:default' }
+    - { value: 'svc:/network/cde-spc:default' }
+    - { value: 'svc:/network/rpc/cde-ttdbserver:tcp' }
+    - { value: 'svc:/network/rpc/cde-calendar-manager:default' }
+    - { value: 'svc:/application/cde-printinfo:default' }
+    - { value: 'svc:/network/smtp:sendmail' }
+    - { value: 'svc:/system/webconsole:console' }
+
+- name: Fix default in /etc/project
+  lineinfile:
+    dest=/etc/project
+    regexp="^default:3"
+    line="default:3::::process.max-file-descriptor=(basic,262144,deny),(privileged,262144,deny)"
