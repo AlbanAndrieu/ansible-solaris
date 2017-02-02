@@ -4,4 +4,3 @@
 - include: solaris.yml
   when: (ansible_os_family in ['Solaris']) and solaris_enabled
   tags: [solaris]
-

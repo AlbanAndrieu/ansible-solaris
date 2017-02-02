@@ -1,6 +1,7 @@
 ---
 solaris_enabled: yes                       # Enable module
+size: 200
 
-ansible_ssh_user: vagrant
-ansible_ssh_pass: 
+#ansible_ssh_user: vagrant
+#ansible_ssh_pass: 
 

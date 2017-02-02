@@ -77,8 +77,8 @@
 #- svr4pkg: name=FIREFOX state=absent category=true
 
 # expects param size in GB
-- set_fact:
-     size: 200
+#- set_fact:
+#     size: 200
 
 - debug: msg="{{size}}"
 
