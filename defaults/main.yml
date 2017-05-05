@@ -4,4 +4,3 @@ size: 200
 
 #ansible_ssh_user: vagrant
 #ansible_ssh_pass: 
-

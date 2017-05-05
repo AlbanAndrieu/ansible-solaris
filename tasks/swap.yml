@@ -3,6 +3,8 @@
 
 # expects param size in GB
 
+#http://docs.oracle.com/cd/E24457_01/html/E21988/gipoj.html#scrolltoc
+
 - debug: msg="{{size}}"
 
 - name: Check current swap

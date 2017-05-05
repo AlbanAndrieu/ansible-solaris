@@ -3,6 +3,99 @@
 
 - debug: msg="Version {{ ansible_distribution }} {{ ansible_distribution_version }}"
 
+  environment:
+    SUNSTUDIO_HOME: "/opt/SUNWspro"
+    PATH: "{{ ansible_env.PATH }}:${SUNSTUDIO_HOME}/bin:/opt/csw/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/ccs/bin:/usr/sfw/bin"
+  
+#SUNSTUDIO_HOME=/opt/SUNWspro
+#PATH=${SUNSTUDIO_HOME}/bin:/opt/csw/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/ccs/bin:/usr/sfw/bin; export PATH
+#Default PATH is :
+#PATH=/usr/bin:/usr/sbin:/usr/ccs/bin:/opt/SUNWspro/bin:/usr/sfw/bin:/usr/local/bin; export PATH
+#echo $SHELL
+##PS1='\w $ '
+#PS1='${HOST}:${PWD} # ';  export PS1
+#Switch to bash
+#exec bash --noprofile --rcfile /dev/null
+
+#Issue with TERM https://www.opencsw.org/community/questions/5/xterm-color-unknown-terminal-type
+#cd /usr/share/lib/terminfo/x
+#sudo  ln -s /opt/csw/share/terminfo/x/xterm-256color .
+#OR
+#TODO in 
+#sudo nano /etc/profile
+#TERM=xterm; export TERM
+##	TERMINFO=/opt/csw/share/terminfo; export TERMINFO
+##TERM=xterm-color; export export
+
+#uname -a
+#Operating system name, release, version, node name, hardware name, and processor type
+#compil-sun4sol-u6-1-ldom.misys.global.ad
+#SunOS compil-sun4sol-u6-1-ldom
+#5.10 Generic_137137-09 sun4v sparc sun4v
+#
+#ptxskgrsun04
+#SunOS ptxskgrsun04
+#5.10 Generic_137137-09 sun4u sparc SUNW,Sun-Fire-V490 Solaris
+
+#sun4u is a normal rack server.
+#sun4v is a blade server. Logical Domains LDOM (https://en.wikipedia.org/wiki/Oracle_VM_Server_for_SPARC)
+
+#Check
+#more /etc/release
+
+#AS root
+#su - root
+
+#/usr/bin/isainfo -v
+
+#See https://en.wikipedia.org/wiki/Solaris_(operating_system)
+#/usr/sfw is coming with Solaris  10
+#/opt/csw has software manually installed
+#the ones in /opt/csw are CSW packages
+
+#see ftp://linuxmafia.com/kb/Admin/ld-lib-path.html
+#crle -c /var/ld/ld.config -l /lib:/usr/lib:/opt/csw/lib
+#crle
+
+#see https://docs.oracle.com/cd/E19205-01/819-5262/aeude/index.html
+
+#/opt/SUNWspro/lib Sun Studio shared libraries 
+#/usr/ccs/lib/ Standard location for SVr4 software 
+#/usr/lib Standard location for UNIX software 
+
+#man dbx
+#nano .profile
+#PATH=/opt/SUNWspro/bin${PATH:+:}${PATH}
+#MANPATH=/opt/SUNWspro/man:${MANPATH:=/usr/share/man}
+
+#Check sun studio mount point
+#ls -lrta /rms/sunpro/sun-studio-12/SUNWspro
+#cd /opt
+#sudo ln -s solarisstudio12.3 SUNWspro
+
+#Install Sun studio yourself
+#wget http://kgrweb/download/sunstudio/12.3/SolarisStudio12.3-solaris-sparc-pkg.tar.bz2
+#bzcat SolarisStudio12.3-solaris-sparc-pkg.tar.bz2 | /bin/tar -xf - 
+#cd SolarisStudio12.3-solaris-sparc-pkg
+#sudo rm -f /.nbi/.nbilock
+#./solarisstudio.sh --non-interactive --javahome /usr/jdk/instances/jdk1.8.0_131 --verbose
+#ls -ld /opt/solarisstudio12.3
+#cd /opt
+#ln -s /opt/solarisstudio12.3 /opt/SUNWspro
+
+#Secure solaris http://www.scn.rain.com/~neighorn/docs/solaris/secureSolaris.html
+
+#Do security check
+#sudo /bin/mv /usr/aset /var
+#sudo /bin/ln -s /var/aset /usr/aset
+#sudo /var/aset/aset -l high
+#sudo more /var/aset/reports/latest/*.rpt
+
+#Security : Add audit control
+#See https://www.ibm.com/support/knowledgecenter/en/SSKMKU/com.ibm.dsm.doc/t_DSM_guide_Sun_SolarisBSM_enable.html
+# svcs | grep "auditd"
+#sudo /usr/sbin/auditconfig -getcond
+
 #WORKAROUND, please use dns role instead
 - name: network | Configure .bash_dns
   command: mv /etc/resolv.conf-template /etc/resolv.conf
@@ -15,27 +108,245 @@
   ignore_errors: true
   tags: dns
 
-#pkgadd -d http://get.opencsw.org/now
-#/opt/csw/bin/pkgutil -U
-#/opt/csw/bin/pkgutil -a vim
-#/opt/csw/bin/pkgutil -y -i vim
-#/opt/csw/bin/vim
-
-
 #- name: Enable some required package
 #  action: command /usr/sbin/pkgadd -d http://get.opencsw.org/now
 #  sudo: yes
-- name: Get pkgutil
+- name: package | Get pkgutil
   shell: "echo y | pkgadd -d http://get.opencsw.org/now all"
-  sudo: yes
+  ignore_errors: true
+  become: yes
 
-#- name: Install other tools
-#  action: command /opt/csw/bin/pkgutil -U
-#  sudo: yes
-- name: Update CSW catalog
-  command: opt/csw/bin/pkgutil -U
-  when: ostype == "solaris"
-  sudo: yes
+#OK wget  http://mirror.opencsw.org/opencsw/
+
+- debug: msg="Check available package at https://www.opencsw.org"
+
+- name: package | Package check
+  command: pkginfo | grep -i compiler
+  ignore_errors: true
+  tags: compiler
+
+#SPROcc
+- name: package | Package compiler check
+  command: pkginfo -l SPRO-12-3-c++
+  tags: compiler
+
+- name: package | Package compiler check
+  command: pkginfo -l SPRO-12-3-cc
+  tags: compiler
+
+- name: package | Package util
+  command: /opt/csw/bin/pkgutil -l
+  ignore_errors: true
+  become: yes
+
+- name: package | Package util
+  command: /opt/csw/bin/pkgutil --catinfo
+  ignore_errors: true
+  become: yes
+
+#pkginfo -l SUNWswmt
+#- name: package | Remove unsecure package
+#  command: /usr/sbin/pkgrm {{ item }}
+#  ignore_errors: true
+#  become: yes
+#  with_items:
+#   - SUNWswmt
+#   - SUNWctpls  
+#   - SUNWftpr  
+#   - SUNWftpu 
+
+#To avoid core dump below with pkgutil
+- name: package | Remove CSWwget
+  command: /usr/sbin/pkgrm CSWwget
+  ignore_errors: true
+  become: yes
+
+- name: package | Remove CSWwget check
+  command:  /usr/sbin/pkgchk -v CSWwget
+  become: yes
+
+#remove patch
+#cd /var/sadm/patch
+#patchrm 120753-10
+#patchrm 118683-07
+#patchrm 119963-24
+
+#See http://www.par.univie.ac.at/solaris/pca/usage.html
+- name: package | Install patch
+  #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWpca
+
+- name: package | Patch update
+  command: pca --update now
+  tags: compiler
+  ignore_errors: true
+  become: yes
+
+- name: package | Patch installed
+  command: pca -l installeds
+  tags: compiler
+  ignore_errors: true
+  become: yes
+  
+- name: package | Patch missing
+  command: pca -l missing
+  tags: compiler
+  ignore_errors: true
+  become: yes
+#List: missing (593/912252)
+
+- name: package | Patch apply
+  command: pca --noreboot --safe --install --wget=/usr/sfw/bin/wget
+  tags: compiler
+  ignore_errors: true
+  become: yes
+
+- name: package | Update CSW catalog
+  command: /opt/csw/bin/pkgutil -U -V
+  #when: ostype == "solaris"  
+  become: yes
+#not found (suggestion: install CSWgnupg)
+#not found (suggestion: install CSWcoreutils)
+
+- name: package | Wget test
+  command: /opt/csw/libexec/pkgutil/wget-sparc http://mirror.opencsw.org/opencsw/testing/sparc/5.10/catalog
+  become: yes
+  ignore_errors: true # core dump
+#We have core dump
+#pstack core|c++filt
+#dbx /opt/csw/libexec/pkgutil/wget-sparc core
+#cat /etc/opt/csw/pkgutil.conf
+
+#/opt/csw/bin/wget http://mirror.opencsw.org/opencsw/testing
+#core dump
+#/usr/bin/truss -f -o /var/tmp/syslog.truss.out /opt/csw/bin/vim test.log
+#truss -s all
+#/usr/bin/truss -f -o /var/tmp/syslog.truss.out /usr/local/bin/scons
+
+#See https://docs.oracle.com/cd/E26502_01/html/E29032/intro-2.html#scrolltoc
+#grep  ENOSYS /usr/include/sys/errno.h
+#89 ENOSYS Operation not applicable
+#grep acancel /usr/include/sys/syscall.h
+
+#/opt/csw/bin/pkgutil -a
+#/opt/csw/bin/pkgutil -A
+
+#install pip
+#sudo /opt/csw/bin/pkgutil -y -i py_pip -D
+#sudo /usr/sbin/pkgchk -L CSWpy-pip # list files
+- name: package | Install python pip
+  #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWpython27
+   - CSWpy-pip
+
+# setup.py
+
+#/opt/csw/bin/pip2.7 install simplejson --verbose
+#sudo pip install simplejson --verbose
+#- name: python | Install simplejson for ansible
+#  pip: name={{ item }}
+#  with_items:
+#    - simplejson
+#  become: yes
+
+- name: python | Install simplejson for ansible
+  #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWpy-simplejson
+
+- name: python | Install python tools
+  #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWpy-virtualenv
+
+- name: python | Install tools for jenkins
+  #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   #- CSWcowsay
+   - CSWgraphviz
+   #- CSWlibfreetype6
+   - CSWfreetype
+   - CSWXvfb
+   #- CSWdoxygen
+   - CSWtop
+   - CSWiperf
+   - CSWgnuplot
+   #- CSWxterm
+   #- CSWsubversion
+   #- CSWsmartmontools
+   - CSWsendmail
+   - CSWnmap
+   - CSWmaven2
+   - CSWjdk7
+   - CSWjdk8
+#   - CSWgcc4core
+#   - CSWgcc5core
+   - CSWcurl
+   #- CSWcolordiff
+   #- CSWcolormake
+   - CSWscreen
+
+- name: security | Install certificates
+  #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWcacertificates
+ 
+#TODO import root CA
+#cd /etc/sfw/openssl/cert
+#cd /etc/opt/csw/ssl/certs
+
+# Install a package
+#TODO it is working on Solaris 10 but failing on Solaris 11
+#We need to find out in ansible if there is an equivalent for Solaris 11
+#until then this must fail
+- name: package | Install CSWcommon
+  #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
+  pkgutil: name=CSWcommon state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+#  svr4pkg: name=CSWcommon src=http://get.opencsw.org/now state=present
+
+- name: package | Install tools for pkgutil
+  #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWgnupg
+   #- CSWcoreutils
+   #The <CSWcas-pycompile> package depends on the package
+   
+- name: package | Install needed tools for generation
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWperl
+   - CSWgit
+   - CSWbash
+   - CSWant
+   - CSWcmake
+   - CSWscons
+   
+- name: package | Install Editor
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWemacs
+   - CSWvim
+   - CSWgedit
+   - CSWnano
 
 - name: Install basic CSW tools
   command: opt/csw/bin/pkgutil -y -i vim diffutils less libreadline6 libreadline_dev libncurses_dev wget libssl_dev
@@ -76,6 +387,46 @@
 # Ensure that a category is not installed.
 #- svr4pkg: name=FIREFOX state=absent category=true
 
+- name: package | Install other needed tools
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWopenssh-client
+   - CSWrsync
+   - CSWlibldap2-4-2
+   - CSWlibiconv2
+   - CSWlibicui18n55
+   - CSWlibicuuc55
+   #- CSWfreetds
+   
+- name: package | Install Webmin
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - SUNWwebminr   
+   
+- name: webmin | Install webmin
+  command: /usr/sfw/lib/webmin/setup.sh
+  become: yes
+  
+- name: webmin | Enable webmin
+  command: svcadm enable webmin
+  become: yes  
+
+#sudo /usr/sfw/lib/webmin/passwd/change-passwd.pl root
+
+- debug: msg="https://server:10000/"   
+   
+#https://serverfault.com/questions/524743/how-to-install-python-libxml2-in-solaris   
+
+- name: network | Package util cleaning
+  command: /opt/csw/bin/pkgutil --cleanup
+  become: yes
+
+- name: network | Package util list INSTALLED
+  command: /opt/csw/bin/pkgutil -A | grep SAME
+  become: yes
+
 # expects param size in GB
 #- set_fact:
 #     size: 200
@@ -83,6 +434,7 @@
 - debug: msg="{{size}}"
 
 - include: swap.yml  # Uses a size param in GB
+  when: (ansible_architecture not in ['sun4v','sun4u']) #Only for x86sol
 
 - name: Enable all CPUs
   command: /usr/sbin/eeprom {{ item.key }}={{ item.value }}
