@@ -40,6 +40,12 @@
 #sun4u is a normal rack server.
 #sun4v is a blade server. Logical Domains LDOM (https://en.wikipedia.org/wiki/Oracle_VM_Server_for_SPARC)
 
+#Performance, tuning
+#On LDOM we need to count like this: 1CPU for the OS processes, 1 for the Solaris kernel, 1 for the Network, 1 for the the I/O
+#so, 4 CPUs only for the OS
+#add also CPUs needed for the applications....
+#30 threads waiting a CPU to become available...it's a BIG run queue. Because I run build with j32
+
 #Check
 #more /etc/release
 
@@ -99,12 +105,14 @@
 #WORKAROUND, please use dns role instead
 - name: network | Configure .bash_dns
   command: mv /etc/resolv.conf-template /etc/resolv.conf
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   tags: dns
 
 #WORKAROUND, please use dns role instead
 - name: network | Configure .bash_dns
   command: mv /etc/nsswitch.dns /etc/nsswitch.conf
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   tags: dns
 
@@ -113,6 +121,7 @@
 #  sudo: yes
 - name: package | Get pkgutil
   shell: "echo y | pkgadd -d http://get.opencsw.org/now all"
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   become: yes
 
@@ -122,25 +131,30 @@
 
 - name: package | Package check
   command: pkginfo | grep -i compiler
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   tags: compiler
 
 #SPROcc
 - name: package | Package compiler check
   command: pkginfo -l SPRO-12-3-c++
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   tags: compiler
 
 - name: package | Package compiler check
   command: pkginfo -l SPRO-12-3-cc
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   tags: compiler
 
 - name: package | Package util
   command: /opt/csw/bin/pkgutil -l
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   become: yes
 
 - name: package | Package util
   command: /opt/csw/bin/pkgutil --catinfo
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   become: yes
 
@@ -158,11 +172,13 @@
 #To avoid core dump below with pkgutil
 - name: package | Remove CSWwget
   command: /usr/sbin/pkgrm CSWwget
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   become: yes
 
 - name: package | Remove CSWwget check
   command:  /usr/sbin/pkgchk -v CSWwget
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   become: yes
 
 #remove patch
@@ -174,45 +190,47 @@
 #See http://www.par.univie.ac.at/solaris/pca/usage.html
 - name: package | Install patch
   #action: "{{ ansible_pkg_mgr }} name={{ item }} state={{ util_pkg_state|default('present') }} update_cache=yes"
-  pkgutil: name={{ item }} state=present
+  pkgutil: name={{ item }} state=present update_catalog=yes
   when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
   with_items:
    - CSWpca
 
 - name: package | Patch update
   command: pca --update now
-  tags: compiler
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   become: yes
 
 - name: package | Patch installed
   command: pca -l installeds
-  tags: compiler
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   become: yes
   
 - name: package | Patch missing
   command: pca -l missing
-  tags: compiler
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   become: yes
-#List: missing (593/912252)
+#Install Summary : 593 total, 342 successful, 159 skipped, 92 failed
 
+#pca --install --wget=/usr/sfw/bin/wget
 - name: package | Patch apply
   command: pca --noreboot --safe --install --wget=/usr/sfw/bin/wget
-  tags: compiler
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   ignore_errors: true
   become: yes
 
 - name: package | Update CSW catalog
   command: /opt/csw/bin/pkgutil -U -V
-  #when: ostype == "solaris"  
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
   become: yes
 #not found (suggestion: install CSWgnupg)
 #not found (suggestion: install CSWcoreutils)
 
 - name: package | Wget test
   command: /opt/csw/libexec/pkgutil/wget-sparc http://mirror.opencsw.org/opencsw/testing/sparc/5.10/catalog
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   become: yes
   ignore_errors: true # core dump
 #We have core dump
@@ -234,6 +252,30 @@
 #/opt/csw/bin/pkgutil -a
 #/opt/csw/bin/pkgutil -A
 
+- name: zfs | Check mountpoint
+  command: zfs get mountpoint
+  #command: zfs get mounted data
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+  
+- name: zfs | Mount /data
+  command: zfs mount -v -a
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+
+#TODO automate /etc/rc2.d/S05zfsmount
+#The zpool "data" is built on an iscsi device which needs the network service available. Solaris OS tries to mount all local filesystems (including ZFS) before the network service is started. This is why it fails to mount the /data.
+- name: zfs | Add zfs mount starter
+  copy: src=S05zfsmount dest=/etc/rc2.d/S05zfsmount mode=744 backup=yes owner=root group=root
+  changed_when: false
+  become: yes
+  ignore_errors: true
+    
+- name: zfs | Get /data info
+  command: zfs get all data
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+  
 #install pip
 #sudo /opt/csw/bin/pkgutil -y -i py_pip -D
 #sudo /usr/sbin/pkgchk -L CSWpy-pip # list files
@@ -244,8 +286,6 @@
   with_items:
    - CSWpython27
    - CSWpy-pip
-
-# setup.py
 
 #/opt/csw/bin/pip2.7 install simplejson --verbose
 #sudo pip install simplejson --verbose
@@ -325,8 +365,8 @@
   when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
   with_items:
    - CSWgnupg
-   #- CSWcoreutils
-   #The <CSWcas-pycompile> package depends on the package
+   - CSWcoreutils
+   #The <CSWcas-pycompile> package depends on the package CSWcoreutils
    
 - name: package | Install needed tools for generation
   pkgutil: name={{ item }} state=present
@@ -348,25 +388,35 @@
    - CSWgedit
    - CSWnano
 
-- name: Install basic CSW tools
-  command: opt/csw/bin/pkgutil -y -i vim diffutils less libreadline6 libreadline_dev libncurses_dev wget libssl_dev
-  when: ostype == "solaris"
+#- name: Install basic CSW tools
+#  command: /opt/csw/bin/pkgutil -y -i vim diffutils less libreadline6 libreadline_dev libncurses_dev wget libssl_dev
 
-- name: Install CSW gm4 # Required for flex
-  command: opt/csw/bin/pkgutil -y -i gm4
-  when: ostype == "solaris"
+- name: package | Install openssl 
+  action: "{{ ansible_pkg_mgr }} name={{ item }} src=http://get.opencsw.org/now state={{ util_pkg_state|default('present') }}"
+  #pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWlibssl-dev
+   #- CSWsasl #ERROR
+
+#/opt/csw/bin/pkgutil -y -i gm4  
+- name: package | Install CSW gm4 # Required for flex
+  action: "{{ ansible_pkg_mgr }} name={{ item }} src=http://get.opencsw.org/now state={{ util_pkg_state|default('present') }}"
+  #pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWgm4
 
 #- name: Install CSW additional packages
 #  command: opt/csw/bin/pkgutil -y -i CSWgpatch CSWtcl CSWbison CSWflex
 - name: Install CSW additional packages
   pkgutil: name={{ item }} state=present
-#  when: (ansible_distribution == 'Solaris' and ansible_distribution_version not in ['11.1'])
-  when: ansible_distribution_release=='Oracle Solaris 10 1/13 s10x_u11wos_24a X86'
+  when: (ansible_distribution == 'Solaris' and ansible_distribution_version not in ['11.1'])
+#   when: ansible_distribution_release == 'Oracle Solaris 10 1/13 s10x_u11wos_24a X86'
 #  svr4pkg: name=CSWcommon src=http://get.opencsw.org/now state=present
   with_items:
-   - CSWcommon
-   - CSWgpatch
-   - CSWtcl
+   #- CSWgpatch
+   #- CSWtcl
    - CSWbison
    - CSWflex
 
@@ -376,7 +426,8 @@
 # Install a package directly from an http site
 #- svr4pkg: name=CSWpkgutil src=http://get.opencsw.org/now state=present zone=current
 
-#- svr4pkg: name=CSWansible src=http://www.opencsw.org/packages/CSWansible/ state=present zone=current
+- svr4pkg: name=CSWansible src=http://www.opencsw.org/packages/CSWansible/ state=present zone=current
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
 
 # Install a package with a response file
 #- svr4pkg: name=CSWggrep src=/tmp/third-party.pkg response_file=/tmp/ggrep.response state=present
@@ -393,11 +444,62 @@
   with_items:
    - CSWopenssh-client
    - CSWrsync
-   - CSWlibldap2-4-2
-   - CSWlibiconv2
-   - CSWlibicui18n55
-   - CSWlibicuuc55
+   - CSWwget
+
+#pkginfo -l SUNWlexpt
+#- name: package | Install C++ needed APR package
+#  pkgutil: name={{ item }} state=present
+#  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+#  with_items:
+#   - SUNWlexpt
+
+- name: package | Install C++ needed APR package
+  pkgutil: name={{ item }} state=present
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+  with_items:
+   - CSWlibaprutil1-ldap
+   #- CSWlibaprutil1-0 #Dependencies CSWlibapr1-0 CSWlibexpat1 CSWlibiconv2
+   #- CSWlibaprutil-dev
+   #- CSWlibapr1-0
+   #- CSWlibapr-dev
+   #- CSWlibexpat0
+   #- CSWlibexpat1
+   #- CSWlibexpat-dev
+   #- CSWlibiconv2
+   #- CSWlibuuid1
+
+#- name: package | Install C++ needed LDAP package
+#  pkgutil: name={{ item }} state=present
+#  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+#  with_items:
+#   - CSWopenldap #Dependencies CSWlibldap-r2-4- CSWlibsasl2-2 CSWliblber2-4-2 CSWlibssl1-0-0
+#   #- CSWlibldap2-4-2
+#   
+#- name: package | Install C++ needed Database package
+#  pkgutil: name={{ item }} state=present
+#  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+#  with_items:   
+#   - CSWlibicui18n55
+#   - CSWlibicuuc55
    #- CSWfreetds
+#   - CSWfreetds-dev
+#   - CSWsqsh-freetds
+#      
+#- name: package | Install C++ needed Other package
+#  pkgutil: name={{ item }} state=present
+#  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+#  with_items:   
+#   - CSWlibcurl4 #Dependencies CSWlibz1
+#   #- CSWlibz1
+#   - CSWlibreadline6 #Dependencies CSWlibncurses6
+#   #- CSWlibncurses6
+   
+#- name: package | Install nodejs 
+#  action: "{{ ansible_pkg_mgr }} name={{ item }} src=http://get.opencsw.org/now state={{ util_pkg_state|default('present') }}"
+#  #pkgutil: name={{ item }} state=present
+#  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
+#  with_items:
+#   - CSWnodejs #Package nodejs not in catalog
    
 - name: package | Install Webmin
   pkgutil: name={{ item }} state=present
@@ -405,15 +507,35 @@
   with_items:
    - SUNWwebminr   
    
-- name: webmin | Install webmin
-  command: /usr/sfw/lib/webmin/setup.sh
-  become: yes
+#- name: webmin | Setup webmin
+#  command: /usr/sfw/lib/webmin/setup.sh
+#  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+#  become: yes
   
 - name: webmin | Enable webmin
-  command: svcadm enable webmin
+  command: /usr/sbin/svcadm enable webmin
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   become: yes  
 
+- name: auditd | Disable auditd
+  command: /usr/sbin/svcadm disable svc:/system/auditd
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+
+- name: auditd | Check auditd
+  command: /usr/sbin/auditconfig -getcond
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes 
+  
+#Please do not enable NFS share on buyild server.
+#In case of NFS share issue we will not be able to perform an HF   
+
 #sudo /usr/sfw/lib/webmin/passwd/change-passwd.pl root
+
+- name: autofs | Check autofs
+  command: /usr/bin/svcs autofs
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes   
 
 - debug: msg="https://server:10000/"   
    
@@ -421,10 +543,12 @@
 
 - name: network | Package util cleaning
   command: /opt/csw/bin/pkgutil --cleanup
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   become: yes
 
 - name: network | Package util list INSTALLED
   command: /opt/csw/bin/pkgutil -A | grep SAME
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
   become: yes
 
 # expects param size in GB
@@ -436,11 +560,63 @@
 - include: swap.yml  # Uses a size param in GB
   when: (ansible_architecture not in ['sun4v','sun4u']) #Only for x86sol
 
+- name: Set sticky bit on sudo
+  file: dest=/opt/csw/bin/sudo mode=u+s
+
+- name: bash | Switch root user to bash
+  command: /usr/sbin/usermod -s /usr/bin/bash root
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+
+- name: bash | Configure root account
+  user: name=root shell=/bin/bash generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
+
+- name:  bash | Configure .bash_profile
+  template: 
+    src=.bash_profile.j2
+    dest=/.bash_profile
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+  
+- name:  bash | Configure .bashrc
+  template: 
+    src=.bashrc.j2
+    dest=/.bashrc
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes    
+
 - name: Enable all CPUs
   command: /usr/sbin/eeprom {{ item.key }}={{ item.value }}
   with_items:
     - { key: 'boot-ncpus' , value: '256'}
     - { key: 'atapi-cd-dma-enabled' , value: '1' }
+
+- name: bash | Switch root user to bash
+  command: /usr/sbin/usermod -s /usr/bin/bash root
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+
+- name: bash | Configure root account
+  user: name=root shell=/bin/bash generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
+
+- name:  bash | Configure .bash_profile
+  template: 
+    src=.bash_profile.j2
+    dest=/.bash_profile
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+  
+- name:  bash | Configure .bashrc
+  template: 
+    src=.bashrc.j2
+    dest=/.bashrc
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+    
+- name: bash | Switch jenkins user to bash
+  command: /usr/sbin/usermod -s /usr/bin/bash jenkins
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
 
 - name: Kernel tuning
   lineinfile:
@@ -455,14 +631,31 @@
     - { key: 'max_nprocs' , value: '256000' }
     - { key: 'rpcmod:clnt_max_conns' , value: '8' }
 
-- name: Set sticky bit on sudo
-  file: dest=/opt/sfw/bin/sudo mode=u+s
-
 - name: Change NFS client
   lineinfile:
     dest=/etc/default/nfs
     line="NFS_CLIENT_VERSMAX=3"
     regexp=^#NFS_CLIENT_VERSMAX=4.*
+
+- name: Stop useless services
+  service: state=stopped name={{item}}
+  with_items:
+    - svc:/application/management/dmi:default
+    - svc:/application/graphical-login/cde-login:default
+    - svc:/network/cde-spc:default
+    - svc:/network/rpc/cde-ttdbserver:tcp
+    - svc:/network/rpc/cde-calendar-manager:default
+    - svc:/application/cde-printinfo:default
+    - svc:/network/smtp:sendmail
+    - svc:/system/webconsole:console
+    - finger
+    - ftp
+    - rlogin
+    - rusers
+    - shell:default
+    - telnet
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
 
 - name: Disable unecessary services
   command: "/usr/sbin/svcadm disable -s {{ item.value }}"
