@@ -1,0 +1,16 @@
+# .bash_profile
+
+export PATH=/usr/local/bin/:/usr/sbin:/usr/bin:/usr/ccs/bin/:/usr/ucb:/opt/sfw/bin/
+export TERM=xterm
+export EDITOR=vim        
+        
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+        . ~/.bashrc
+fi
+
+# User specific environment and startup programs
+
+PATH=$PATH:$HOME/bin
+
+PS1='\[\e[1;32m\][\u@\h \W]\$\[\e[0m\] '

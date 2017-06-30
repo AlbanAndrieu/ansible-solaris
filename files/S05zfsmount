@@ -1,0 +1,5 @@
+# cat /etc/rc2.d/S05zfsmount
+# Mount zpool data
+##sleep 60
+/sbin/zfs mount -a
+#

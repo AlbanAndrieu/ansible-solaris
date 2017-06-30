@@ -1,0 +1,18 @@
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+# User specific aliases and functions
+
+alias ll="ls -l"
+alias la="ll -a"
+
+export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+export PATH=$PATH:/opt/csw/bin/
+#alias hudson="sudo -E /kgr-mvn/hudson/etc/init.d/hudson"
+#alias tools="cd /kgr/dev/kgr_maven"
+
+export PHANTOMJS_CDNURL=http://kgrweb/download/phantomjs
