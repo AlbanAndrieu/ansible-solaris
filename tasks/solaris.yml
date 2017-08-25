@@ -453,6 +453,9 @@
 #  with_items:
 #   - SUNWlexpt
 
+#Add UTF-8 locale
+#http://ddiguru.com/index.php?option=com_content&view=article&id=50:how-to-manually-add-locale-pkgs-on-solaris-10&catid=12:solaris&Itemid=2
+
 - name: package | Install C++ needed APR package
   pkgutil: name={{ item }} state=present
   when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
