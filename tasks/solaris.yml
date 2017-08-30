@@ -453,9 +453,6 @@
 #  with_items:
 #   - SUNWlexpt
 
-#Add UTF-8 locale
-#http://ddiguru.com/index.php?option=com_content&view=article&id=50:how-to-manually-add-locale-pkgs-on-solaris-10&catid=12:solaris&Itemid=2
-
 - name: package | Install C++ needed APR package
   pkgutil: name={{ item }} state=present
   when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))
@@ -594,6 +591,11 @@
     - { key: 'boot-ncpus' , value: '256'}
     - { key: 'atapi-cd-dma-enabled' , value: '1' }
 
+- name: bash | Switch jenkins user to bash
+  command: /usr/sbin/usermod -s /usr/bin/bash jenkins
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes
+
 - name: bash | Switch root user to bash
   command: /usr/sbin/usermod -s /usr/bin/bash root
   when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
@@ -639,6 +641,32 @@
     dest=/etc/default/nfs
     line="NFS_CLIENT_VERSMAX=3"
     regexp=^#NFS_CLIENT_VERSMAX=4.*
+
+#Add UTF-8 locale
+#See http://ddiguru.com/index.php?option=com_content&view=article&id=50:how-to-manually-add-locale-pkgs-on-solaris-10&catid=12:solaris&Itemid=2 
+#http://ddiguru.com/blog/50-how-to-manually-add-locale-pkgs-on-solaris-10
+#you might need to install 
+#pkgadd -d . SUNWeuluf
+#pkgadd -d . SUNWeu8os
+
+#locale -a
+#localeadm -a en_US.UTF-8 
+# export LANG=en_US.UTF-8
+#LC_ALL=en_US.UTF-8
+
+#/opt/csw/bin/pkgutil -y -i texlive_fonts_extra 
+#/opt/csw/bin/pkgutil -y -i texlive_common
+#/opt/csw/bin/pkgutil -y -i texlive_base
+#/opt/csw/bin/pkgutil -y -i fontconfig
+#/opt/csw/bin/pkgutil -y -i uniconvertor
+#/opt/csw/bin/pkgutil -y -i gsfonts_stub
+##/opt/csw/bin/pkgutil -y -i wmf_fonts
+  
+- name: bash | Switch local to en_US.UTF-8
+  command: localeadm -q en_US.UTF-8 -v
+  when: ((ansible_distribution == 'Solaris') and (ansible_distribution_version not in ['11.1']))  
+  become: yes   
+  ignore_errors: true
 
 - name: Stop useless services
   service: state=stopped name={{item}}
